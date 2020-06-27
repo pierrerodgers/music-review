@@ -11,31 +11,40 @@ async function getReviewUrl(artist, title) {
     try {
         // First need to search for album review
         const url = `http://www.nme.com/?s=${artist}+${title.substring(0, 6)}+review`.replace(/ /g, '+');
-        console.log(url);
+
         const response = await getHtml(url).catch( error => console.log(error));
         //console.log(response);
         const $ = cheerio.load(response);
 
-        return $('.entry-title')[0].children[0].attribs.href;
+        // Get first entry of search
+        const newUrl = $('.entry-title')[0].children[0].attribs.href;
 
+        if (!newUrl.includes('review')) throw 'no review found';
+        return newUrl;
     }
 
     catch {
-        throw new error;
+        throw 'search error'
     }
 
 }
 
 async function getNmeScore(artist,title) {
-    const url = await getReviewUrl(artist, title).catch( error => console.log(error));
+    try {
+        const url = await getReviewUrl(artist, title);
     
-    const response = await getHtml(url);
+        const response = await getHtml(url);
 
-    const $ = cheerio.load(response);
+        const $ = cheerio.load(response);
 
-    const score = $('.td-icon-star').length;
+        const score = $('.td-icon-star').length;
+        
+        return score;
+    }
+    catch(error) {
+        return '-';
+    }
     
-    return score;
 }
 
 testingArray = [['Charli XCX',  "how i'm feeling now"], ['Khruangbin', 'Mordechai'], 
