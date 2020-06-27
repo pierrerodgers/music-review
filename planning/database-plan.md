@@ -12,6 +12,7 @@
   - Bio : String ? 
   - Genres : [ String ] ?
   - Links to music services : [ String ] ?
+  - Image : String ?
 
 - Albums/releases
   - ID ! 
@@ -20,6 +21,8 @@
   - Genres : [ String ] ?
   - Reviews : [ Review ] ?
   - Links to albums in music services : [ String ] ?
+  - Image : String !
+  - Date : Date !
 
 - Review
   - ID !
@@ -36,8 +39,8 @@
   - Name : String !
   - Reviews : [ Review ] !
   - Link : String !
+  - Image : String !
 
 - Score
   - Type enum : String ! (i.e. stars, out of 10, out of 100)
   - Value : Number !
-  
