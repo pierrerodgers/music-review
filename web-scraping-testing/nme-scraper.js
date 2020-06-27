@@ -28,15 +28,21 @@ async function getReviewUrl(artist, title) {
 
 async function getNmeScore(artist,title) {
     const url = await getReviewUrl(artist, title).catch( error => console.log(error));
-    return url;
-}
+    
+    const response = await getHtml(url);
 
-getNmeScore('Charli xcx', "how i'm feeling now");
+    const $ = cheerio.load(response);
+
+    const score = $('.td-icon-star').length;
+    
+    return score;
+}
 
 testingArray = [['Charli XCX',  "how i'm feeling now"], ['Khruangbin', 'Mordechai'], 
 ['HAIM', 'Women In Music Pt. III'], ['Weyes Blood', 'Titanic Rising'], ['Perfume Genius', 'Set my heart on fire immediately'], 
 ['Phoebe Bridgers', 'Punisher'], ['Lady Gaga', 'Chromatica'], ['Yves Tumor', 'Heaven to a tortured mind'], 
-['Moses Sumney', 'grae'], ['Rina Sawayama', 'Sawayama'], ['TOPS', 'I feel alive']];
+['Moses Sumney', 'grae'], ['Rina Sawayama', 'Sawayama'], ['TOPS', 'I feel alive'],
+['The 1975', 'Notes on a conditional form']];
 
 testingArray.map( async album =>  {
     const score = await getNmeScore(album[0], album[1]);
