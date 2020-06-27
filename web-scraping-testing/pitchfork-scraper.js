@@ -2,23 +2,48 @@ const axios = require('axios');
 const cheerio = require('cheerio')
 
 async function getHtml(url) {
-    const response = await axios.get(url);
-    console.log(response);
+    const { data } = await axios.get(url);
+    return data;
 }
 
 async function getPitchforkScore(artist, title) {
-    let artistString = artist.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
-    artistString = artistString.replace(/ /g, '-').toLowerCase();
-    console.log(artistString)
+    try{
+        // Strip artist string of punctuation/capitalisation and add -
+        // i.e. Charli XCX --> charli-xcx
+        let artistString = artist.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
+        artistString = artistString.replace(/ /g, '-').toLowerCase();
 
-    let titleString = title.replace(/[.,\/#!$'%\^&\*;:{}=\-_`~()]/g,"");
-    titleString = titleString.replace(/ /g, '-').toLowerCase();
-    console.log(titleString);
+        //Same for the title
+        // i.e. how i'm feeling now --> how-im-feeling-now
+        let titleString = title.replace(/[.,\/#!$'%\^&\*;:{}=\-_`~()]/g,"");
+        titleString = titleString.replace(/ /g, '-').toLowerCase();
+        
+        // Construct review URL
+        const reviewUrl = `http://www.pitchfork.com/reviews/albums/${artistString}-${titleString}`;
 
-    const reviewUrl = `http://www.pitchfork.com/reviews/albums/${artistString}-${titleString}`;
-    
-    await getHtml(reviewUrl).catch(error => console.log(error));
+        // Get html response and load into cheerio
+        const response = await getHtml(reviewUrl);
+        const $ = cheerio.load(response);
 
+        // Get score from html (class = score)
+        const score = await $('.score').text();
 
+        return score;
+    }
+    catch {
+        return '-';
+    }
 }
-getPitchforkScore('Charli xcx', "how i'm feeling now");
+
+testingArray = [['Charli XCX',  "how i'm feeling now"], ['Khruangbin', 'Mordechai'], 
+['HAIM', 'Women In Music Pt. III'], ['Weyes Blood', 'Titanic Rising'], ['Perfume Genius', 'Set my heart on fire immediately'], 
+['Phoebe Bridgers', 'Punisher'], ['Lady Gaga', 'Chromatica'], ['Yves Tumor', 'Heaven to a tortured mind'], 
+['Moses Sumney', 'grae'], ['Rina Sawayama', 'Sawayama'], ['TOPS', 'I feel alive']];
+
+testingArray.map( async album =>  {
+    const score = await getPitchforkScore(album[0], album[1]);
+
+    console.log(`${score} === ${album[1]} by ${album[0]}.`);
+
+
+})
