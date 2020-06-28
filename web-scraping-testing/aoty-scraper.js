@@ -42,12 +42,14 @@ async function getAotyScores(artist, title) {
         
         const reviewerArr = $('.albumReviewHeader > a > span');
         const scoresArr = $('.albumReviewRating > span');
-        const dateArr = $('.albumReviewRow > [itemprop="dateCreated"]')
+        const dateArr = $('.albumReviewRow > [itemprop="dateCreated"]');
+        const linkArr = $('.albumReviewLinks .extLink > a');
 
         reviewerArr.map( (index, element) => {
             console.log(element.firstChild.data);
             console.log(scoresArr[index].firstChild.data);
             console.log(dateArr[index].attribs.content);
+            console.log(linkArr[index].attribs.href);
         });
     
        
