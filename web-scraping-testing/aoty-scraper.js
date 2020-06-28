@@ -8,12 +8,37 @@ async function urlToCheerio(url) {
 
 }
 
-async function getAotyScores(artist, title) {
+async function getAlbumLink(artist, title) {
     // Search page by album title, match to artist by filtering html
     const url = `https://www.albumoftheyear.org/search/albums/?q=${title.replace(/ /g, '%20')}`;
     console.log(url);
     let $ = await urlToCheerio(url);
+
+    const resultsArr = $('.albumBlock .albumTitle');
+    let albumLink = ' ';
+
+    for (let i = 0; i < resultsArr.length; i++) {
+        
+        if (resultsArr[i].parent.attribs.href.includes(`${artist.replace(/ /g, '-').toLowerCase()}`)) {
+            albumLink = resultsArr[i].parent.attribs.href;
+            break;
+        }
+
+    }
+    if (albumLink == ' ') throw 'error';
+    else return `http://www.albumoftheyear.org${albumLink}`;
+}
+
+async function getAotyScores(artist, title) {
+    try{
+        let albumLink = await getAlbumLink(artist, title);
+        console.log(albumLink);
+    }
+    catch {
+        console.log('error finding album');
+    }
     
+
 }
 
 testingArray = [['Charli XCX',  "how i'm feeling now"], ['Khruangbin', 'Mordechai'], 
