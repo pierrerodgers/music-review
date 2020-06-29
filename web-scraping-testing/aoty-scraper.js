@@ -24,14 +24,14 @@ async function getAlbumLink(artist, title) {
         }
 
     }
-    if (albumLink == ' ') throw 'error';
+    if (albumLink == ' ') throw 'error in getAlbumLink function';
     else return `http://www.albumoftheyear.org${albumLink}`;
 }
 
 async function getAotyScores(artist, title) {
     try{
-        console.log(artist);
-        console.log(title);
+        /*console.log(artist);
+        console.log(title);*/
         let albumLink = await getAlbumLink(artist, title);
         
         const $ = await urlToCheerio(albumLink);
@@ -58,8 +58,8 @@ async function getAotyScores(artist, title) {
     
     
     }
-    catch {
-        console.log('error finding album');
+    catch (error) {
+        //console.log(error);
     }
     
 
@@ -67,15 +67,19 @@ async function getAotyScores(artist, title) {
 if (process.argv.length != 4) console.log('Usage: node aoty-scraper.js "<Artist Name>" "<Album Title>"');
 else {
     getAotyScores(process.argv[2], process.argv[3]);
-}
+}/*
 testingArray = [['Charli XCX',  "how i'm feeling now"], ['Khruangbin', 'Mordechai'], 
 ['HAIM', 'Women In Music Pt. III'], ['Weyes Blood', 'Titanic Rising'], ['Perfume Genius', 'Set my heart on fire immediately'], 
 ['Phoebe Bridgers', 'Punisher'], ['Lady Gaga', 'Chromatica'], ['Yves Tumor', 'Heaven to a tortured mind'], 
 ['Moses Sumney', 'grae'], ['Rina Sawayama', 'Sawayama'], ['TOPS', 'I feel alive'],
 ['The 1975', 'Notes on a conditional form']];
 
-/*testingArray.map( async album =>  {
+testingArray.map( async album =>  {
     await getAotyScores(album[0], album[1]);
     console.log(album);
 
 })*/
+
+module.exports = {
+    getAotyScores: getAotyScores,
+}
