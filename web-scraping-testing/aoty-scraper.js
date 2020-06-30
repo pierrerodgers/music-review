@@ -29,7 +29,7 @@ async function getAlbumLink(artist, title) {
 }
 
 async function getAotyScores(artist, title) {
-    try{
+    try {
         /*console.log(artist);
         console.log(title);*/
         let albumLink = await getAlbumLink(artist, title);
@@ -64,6 +64,58 @@ async function getAotyScores(artist, title) {
     
 
 }
+
+/* 
+    NEW STRATEGY
+    Use aoty yearly release tracker of LPs to get reviews then add to mongodb
+*/
+
+async function getAlbumsForYear(year) {
+    //List of albums to return
+    let albumsArr = [];
+    
+    // Construction of url
+    let page = 1;
+    let url = `https://www.albumoftheyear.org/${year}/releases/?type=lp&s=release&page=${page}`
+    
+    let $ = await urlToCheerio(url);
+
+    while ($('div .large-font').length == 0) { //this returns 1 when end of list reached
+        let albumNames = $('.albumBlock .albumTitle');
+        let artists = $('.albumBlock .artistTitle');
+        
+        albumNames.map( (index, albumDiv) => {
+            let name = albumDiv.firstChild.data;
+            let artist = artists[index].firstChild.data;
+            let url = albumDiv.parent.attribs.href;
+            
+            let album = {
+                name: name,
+                artist: artist,
+                url: `https://www.albumoftheyear.org/${url}`;
+            }
+
+            albumsArr.push(album);
+        });
+
+        page++;
+        url = `https://www.albumoftheyear.org/${year}/releases/?type=lp&s=release&page=${page}`;
+        $ = await urlToCheerio(url);
+
+    }
+
+    return albumsArr;
+
+}
+
+getAlbumsForYear(2019);
+
+
+
+
+
+
+/*
 if (process.argv.length != 4) console.log('Usage: node aoty-scraper.js "<Artist Name>" "<Album Title>"');
 else {
     getAotyScores(process.argv[2], process.argv[3]);
