@@ -52,9 +52,6 @@ async function getAotyScores(artist, title) {
             console.log(linkArr[index].attribs.href);
         });
     
-       
-    
-    
     
     
     }
@@ -63,6 +60,51 @@ async function getAotyScores(artist, title) {
     }
     
 
+}
+
+async function getScoresByAlbum(album) {
+    try {
+        albumLink = album.url;
+        
+        const $ = await urlToCheerio(albumLink);
+
+        // Reviews stored in divs: id=criticReviewContainer and #criticReviewContainer child #moreCricitReviews (YES TYPO)
+        // Review class: .albumReviewRow
+
+        let reviews = [];
+
+        const reviewerArr = $('.albumReviewHeader > a > span');
+        const scoresArr = $('.albumReviewRating > span');
+        const dateArr = $('.albumReviewRow > [itemprop="dateCreated"]');
+        const linkArr = $('.albumReviewLinks .extLink > a');
+
+        reviewerArr.map( (index, element) => {
+            let reviewer = element.firstChild.data;
+            let score = scoresArr[index].firstChild.data;
+            let date = dateArr[index].attribs.content;
+            let link = linkArr[index].attribs.href;
+
+            let review = {
+                reviewer: reviewer,
+                score: score,
+                date: date,
+                link: link,
+            }
+
+            reviews.push(review);
+            
+        });
+
+        console.log(`reviews length: ${reviews.length}`);
+
+        return reviews;
+    
+    
+    
+    }
+    catch (error) {
+        //console.log(error);
+    }
 }
 
 /* 
@@ -76,11 +118,11 @@ async function getAlbumsForYear(year) {
     
     // Construction of url
     let page = 1;
-    let url = `https://www.albumoftheyear.org/${year}/releases/?type=lp&s=release&page=${page}`
+    let url = `https://www.albumoftheyear.org/${year}/releases/?type=lp&s=critic&page=${page}`
     
     let $ = await urlToCheerio(url);
 
-    while ($('div .large-font').length == 0) { //this returns 1 when end of list reached
+    while ($('div .large-font').length == 0 && page <10) { //this returns 1 when end of list reached
         let albumNames = $('.albumBlock .albumTitle');
         let artists = $('.albumBlock .artistTitle');
         
@@ -92,15 +134,17 @@ async function getAlbumsForYear(year) {
             let album = {
                 name: name,
                 artist: artist,
-                url: `https://www.albumoftheyear.org/${url}`;
+                url: `https://www.albumoftheyear.org/${url}`,
             }
 
             albumsArr.push(album);
         });
 
         page++;
-        url = `https://www.albumoftheyear.org/${year}/releases/?type=lp&s=release&page=${page}`;
+        url = `https://www.albumoftheyear.org/${year}/releases/?type=lp&s=critic&page=${page}`;
         $ = await urlToCheerio(url);
+
+        console.log(albumsArr.length);
 
     }
 
@@ -108,8 +152,18 @@ async function getAlbumsForYear(year) {
 
 }
 
-getAlbumsForYear(2019);
 
+async function processYear(year) {
+    const albums = await getAlbumsForYear(year);
+    albums.map(async album => {
+        album.reviews = await getScoresByAlbum(album);
+        console.log(album.reviews);
+    })
+
+    console.log(albums);
+}
+
+processYear(2019);
 
 
 
