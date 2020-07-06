@@ -167,7 +167,7 @@ async function processYear(year) {
 
 async function addYearToDB(year) {
     const albums = await processYear(year);
-    //console.log (albums);
+    
     const dbUrl = 'mongodb://localhost:27017';
 
     const dbName = 'music';
@@ -175,8 +175,7 @@ async function addYearToDB(year) {
     MongoClient.connect(dbUrl, async (err, client) => {
         if (err) throw error;
         let db = client.db(dbName);
-        //console.log(db);
-        console.log(albums);
+
         for (let album of albums) {
             try {
                 console.log(`adding album: ${album}`);
@@ -228,7 +227,8 @@ async function addYearToDB(year) {
                         score: review.score,
                         date: date
                     };
-                    console.log(reviewToAdd);
+
+                    
                     db.collection('reviews').insertOne(reviewToAdd);
 
 
@@ -237,9 +237,7 @@ async function addYearToDB(year) {
             catch (error) {
                 console.log(error);
             }
-            
-
-
+        
 
         }
 
