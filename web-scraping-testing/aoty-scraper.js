@@ -1,7 +1,8 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const MongoClient = require('mongodb').MongoClient;
-
+const fs = require('fs');
+var errors = fs.createWriteStream("errors.txt", {flags:'a'});
 
 async function urlToCheerio(url) {
     const { data } = await axios.get(url);
@@ -102,6 +103,8 @@ async function getScoresByAlbum(album) {
     
     }
     catch (error) {
+        errors.write(`${album.artist} -- ${album.name} ------ error finding reviews\n`);
+
         console.log(error);
     }
 }
@@ -228,7 +231,7 @@ async function addYearToDB(year) {
                         date: date
                     };
 
-                    
+
                     db.collection('reviews').insertOne(reviewToAdd);
 
 
@@ -248,33 +251,13 @@ async function addYearToDB(year) {
 
 }
 
-addYearToDB(2001);
+addYearToDB(2019);
 
 //addYearToDB(2000).catch(error => console.log(error));
 /*for ( var i = 2001; i < 2018; i++) {
     addYearToDB(i).catch(error => console.log(error));
 }*/
 
-
-
-
-
-/*
-if (process.argv.length != 4) console.log('Usage: node aoty-scraper.js "<Artist Name>" "<Album Title>"');
-else {
-    getAotyScores(process.argv[2], process.argv[3]);
-}/*
-testingArray = [['Charli XCX',  "how i'm feeling now"], ['Khruangbin', 'Mordechai'], 
-['HAIM', 'Women In Music Pt. III'], ['Weyes Blood', 'Titanic Rising'], ['Perfume Genius', 'Set my heart on fire immediately'], 
-['Phoebe Bridgers', 'Punisher'], ['Lady Gaga', 'Chromatica'], ['Yves Tumor', 'Heaven to a tortured mind'], 
-['Moses Sumney', 'grae'], ['Rina Sawayama', 'Sawayama'], ['TOPS', 'I feel alive'],
-['The 1975', 'Notes on a conditional form']];
-
-testingArray.map( async album =>  {
-    await getAotyScores(album[0], album[1]);
-    console.log(album);
-
-})*/
 
 module.exports = {
     getAotyScores: getAotyScores,
