@@ -1,5 +1,7 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
+const MongoClient = require('mongodb').MongoClient;
+
 
 async function urlToCheerio(url) {
     const { data } = await axios.get(url);
@@ -73,27 +75,24 @@ async function getScoresByAlbum(album) {
 
         let reviews = [];
 
-        const reviewerArr = $('.albumReviewHeader > a > span');
-        const scoresArr = $('.albumReviewRating > span');
-        const dateArr = $('.albumReviewRow > [itemprop="dateCreated"]');
-        const linkArr = $('.albumReviewLinks .extLink > a');
+        const reviewRow = $('#criticReviewContainer .albumReviewRow, #moreCricitReviews .albumReviewRow');
+        reviewRow.map( (index, element) => {
 
-        reviewerArr.map( (index, element) => {
-            let reviewer = element.firstChild.data;
-            let score = scoresArr[index].firstChild.data;
-            let date = dateArr[index].attribs.content;
-            let link = linkArr[index].attribs.href;
 
+            const reviewerArr = $('.albumReviewHeader > a > span', element);
+            const scoresArr = $('.albumReviewRating > span', element);
+            const dateArr = $('.albumReviewRow > [itemprop="dateCreated"]', element);
+            const linkArr = $('.albumReviewLinks .extLink > a', element);
+            
             let review = {
-                reviewer: reviewer,
-                score: score,
-                date: date,
-                link: link,
+                reviewer: reviewerArr[0].firstChild.data,
+                score: scoresArr[0].firstChild.data,
+                date: dateArr[0].attribs.content,
+                link : linkArr[0].attribs.href,
             }
 
             reviews.push(review);
-            
-        });
+        })
 
         console.log(`reviews length: ${reviews.length}`);
 
@@ -103,7 +102,7 @@ async function getScoresByAlbum(album) {
     
     }
     catch (error) {
-        //console.log(error);
+        console.log(error);
     }
 }
 
@@ -122,7 +121,7 @@ async function getAlbumsForYear(year) {
     
     let $ = await urlToCheerio(url);
 
-    while ($('div .large-font').length == 0 && page <10) { //this returns 1 when end of list reached
+    while ($('div .large-font').length == 0) { //this returns 1 when end of list reached
         let albumNames = $('.albumBlock .albumTitle');
         let artists = $('.albumBlock .artistTitle');
         
@@ -155,15 +154,108 @@ async function getAlbumsForYear(year) {
 
 async function processYear(year) {
     const albums = await getAlbumsForYear(year);
-    albums.map(async album => {
-        album.reviews = await getScoresByAlbum(album);
-        console.log(album.reviews);
-    })
 
-    console.log(albums);
+    for (let album of albums) {
+        album.reviews = await getScoresByAlbum(album);
+        if (album.reviews == undefined) album.reviews = [];
+        //console.log(album.reviews);
+    }
+
+    return albums;
 }
 
-processYear(2019);
+
+async function addYearToDB(year) {
+    const albums = await processYear(year);
+    //console.log (albums);
+    const dbUrl = 'mongodb://localhost:27017';
+
+    const dbName = 'music';
+
+    MongoClient.connect(dbUrl, async (err, client) => {
+        if (err) throw error;
+        let db = client.db(dbName);
+        //console.log(db);
+        console.log(albums);
+        for (let album of albums) {
+            try {
+                console.log(`adding album: ${album}`);
+
+                // Find artist in db, add if it doesnt exist, fill artistId field
+                let artistDoc = await db.collection('artists').findOne({name: album.artist});
+                let artistId;
+                if (artistDoc) {
+                    artistId = artistDoc._id;
+                }
+                else {
+                    let artist = await db.collection('artists').insertOne({name: album.artist});
+                    artistId = artist.insertedId;
+                }
+                console.log(`artistid: ${artistId}`)
+
+                // Find album in db, add if it doesn't exist, fill albumId field
+                let albumDoc = await db.collection('albums').findOne({name: album.name, artist: album.artist});
+                let albumId;
+                if (albumDoc) albumId = albumDoc._id;
+                else {
+                    let insertedAlbum = await db.collection('albums').insertOne({name: album.name, artist: artistId, });
+                    albumId = insertedAlbum.insertedId;
+                }
+                console.log(`album: ${albumId}`)
+
+
+                // Add every review the album has/add reviewer if needed
+                for (let review of album.reviews) {
+                    // Find reviewer in db, add if it doesn't exist, fill reviewerId field
+                    let reviewerId;
+                    let reviewerDoc = await db.collection('reviewers').findOne({name: review.reviewer});
+                    if (reviewerDoc) reviewerId = reviewerDoc._id;
+                    else {
+                        // Link will have to be modified one-by-one in db
+                        let reviewer = await db.collection('reviewers').insertOne({name: review.reviewer, link: `${review.link}`});
+                        reviewerId = reviewer.insertedId;
+                    }
+
+                    // Add review to db
+
+                    let date = new Date(review.date);
+
+                    let reviewToAdd = {
+                        reviewer: reviewerId,
+                        artist: artistId,
+                        album: albumId,
+                        link: review.link,
+                        score: review.score,
+                        date: date
+                    };
+                    console.log(reviewToAdd);
+                    db.collection('reviews').insertOne(reviewToAdd);
+
+
+                }
+            }
+            catch (error) {
+                console.log(error);
+            }
+            
+
+
+
+        }
+
+        client.close();
+
+    });
+
+
+}
+
+addYearToDB(2001);
+
+//addYearToDB(2000).catch(error => console.log(error));
+/*for ( var i = 2001; i < 2018; i++) {
+    addYearToDB(i).catch(error => console.log(error));
+}*/
 
 
 
