@@ -103,7 +103,7 @@ async function getScoresByAlbum(album) {
     
     }
     catch (error) {
-        errors.write(`${album.artist} -- ${album.name} ------ error finding reviews\n`);
+        errors.write(`${album.artist} -- ${album.name} ------ error finding reviews (${error})\n`);
 
         console.log(error);
     }
@@ -238,6 +238,7 @@ async function addYearToDB(year) {
                 }
             }
             catch (error) {
+                errors.write(`${album.artist} -- ${album.title} ------ error adding to mongodb (${error})\n`);
                 console.log(error);
             }
         
