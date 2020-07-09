@@ -84,12 +84,15 @@ async function getScoresByAlbum(album) {
             const scoresArr = $('.albumReviewRating > span', element);
             const dateArr = $('.albumReviewRow > [itemprop="dateCreated"]', element);
             const linkArr = $('.albumReviewLinks .extLink > a', element);
+            let link;
+            if (linkArr.length == 0) link = '';
+            else link = linkArr[0].attribs.href;
             
             let review = {
                 reviewer: reviewerArr[0].firstChild.data,
                 score: scoresArr[0].firstChild.data,
                 date: dateArr[0].attribs.content,
-                link : linkArr[0].attribs.href,
+                link : link,
             }
 
             reviews.push(review);
@@ -252,12 +255,12 @@ async function addYearToDB(year) {
 
 }
 
-addYearToDB(2019);
+//addYearToDB(2019);
 
 //addYearToDB(2000).catch(error => console.log(error));
-/*for ( var i = 2001; i < 2018; i++) {
-    addYearToDB(i).catch(error => console.log(error));
-}*/
+for ( var i = 2001; i < 2019; i++) {
+    addYearToDB(i);
+}
 
 
 module.exports = {
