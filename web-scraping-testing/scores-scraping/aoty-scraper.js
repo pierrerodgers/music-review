@@ -258,8 +258,30 @@ async function addYearToDB(year) {
 //addYearToDB(2019);
 
 //addYearToDB(2000).catch(error => console.log(error));
-for ( var i = 2001; i < 2019; i++) {
+/*for ( var i = 2001; i < 2019; i++) {
     addYearToDB(i);
+}*/
+
+printReviewers();
+
+async function printReviewers() {
+    const dbUrl = 'mongodb://localhost:27017';
+    const dbName = 'music';
+
+    MongoClient.connect( dbUrl, async (error, client) => {
+        if (error) throw error;
+        let db = client.db(dbName);
+
+        let reviewers = await db.collection("reviewers").find().toArray();
+        console.log(typeof(reviewers));
+
+        let reviewersFile = fs.createWriteStream("reviewers.txt", {flags:'a'});
+
+        reviewers.map( reviewer => {
+            console.log(reviewer);
+            reviewersFile.write(`${reviewer.name}\n`);
+        })
+    })
 }
 
 
