@@ -3,3 +3,5 @@
 */node_modules
 /mongodb-testing/data/
 /mongodb-testing/data/*
+web-scraping-testing/errors.txt
+mongodb-testing/mongodb-scripts.md
