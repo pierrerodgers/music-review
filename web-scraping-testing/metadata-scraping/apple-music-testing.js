@@ -20,52 +20,96 @@ const jwtToken = jwt.sign({}, privateKey, {
   }
 });
 
-async function getAlbumReleaseDate(artist, name) {
+
+async function getAppleMusicAlbum(artist,name) {
     try {
+        console.log(`${artist} -- ${name}`);
         // Create search term ( i.e. /search?Charli+XCX+how+i'm+feeling+now)
         let regex = /[!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]/g;
         let artistString = artist.replace(regex, '').replace(/ /g, '+');
         let albumString = name.replace(regex, '').replace(/ /g, '+');
         let search = `${artistString}+${albumString}`;
         
-        // Get API response using token and get first result
+        // Get API response using token 
         let response = await axios.get(`https://api.music.apple.com/v1/catalog/us/search?term=${search}&limit=5`, {headers: {Authorization: `Bearer ${jwtToken}`}});
         console.log(response.status);
         let albums = response.data.results.albums.data;
-        let album = albums.find( album => album.attributes.name == name && album.attributes.artistName == artist);
-        // Throw error if needed
-        if (album === undefined) throw new Error(`Error finding release date:${artist} - ${name}`);
         
-        // Create date and log
-        let date = new Date(album.attributes.releaseDate);
+        //Find first matching result 
+        let album = albums.find( album => {
+            let cleanedInputName = name.toLowerCase().replace(regex, '');
+            let cleanedInputArtist = artist.toLowerCase().replace(regex,'');
 
-        console.log(`${album.attributes.name} ---- ${date}`);
-        return date;
+            let cleanedOutputName = album.attributes.name.toLowerCase().replace(regex, '');
+            let cleanedOutPutArtist = album.attributes.artistName.toLowerCase().replace(regex, '');
+            
+            return (cleanedInputArtist == cleanedOutPutArtist && cleanedInputName == cleanedOutputName);
+        });
+
+        if (album === undefined) throw new Error(`Error finding apple music data:${artist} - ${name}`);
+
+        return album;
     }
     catch (err) {
         // Write error to file if needed
         errors.write(`error with ${artist} - ${name}:${err.toString()}\n`);
     }
-    
-    
 }
 
-async function updateDbReleaseDates() {
+async function getAppleMusicMetadata(album, artist) {
+    
+    //Get apple music data
+    let appleMusicAlbum = await getAppleMusicAlbum(artist.name, album.name);
+
+    // Create date and log
+    let releaseDate = (appleMusicAlbum) ? new Date(appleMusicAlbum.attributes.releaseDate) : null;
+    console.log(`${album.name} ---- ${releaseDate}`);
+
+    // Get genre data
+    let genres = (appleMusicAlbum) ? appleMusicAlbum.attributes.genreNames : [];
+    console.log(genres);
+
+    // Get record label data
+    let recordLabel = (appleMusicAlbum)? appleMusicAlbum.attributes.recordLabel : null;
+    console.log(recordLabel);
+
+    // Get Apple Music link
+    let appleMusicUrl = (appleMusicAlbum) ? appleMusicAlbum.attributes.url : '';
+    let streamingUrls;
+    if (typeof album.streamingUrls === 'undefined') {
+        streamingUrls = {'appleMusic' : appleMusicUrl};
+    }
+    else {
+        streamingUrls = album.streamingUrls;
+        streamingUrls.appleMusic = appleMusicUrl;
+    }
+
+    // Add to album document
+    album.releaseDate = releaseDate;
+    album.genres = genres;
+    album.recordLabel = recordLabel;
+    album.streamingUrls = streamingUrls;
+
+    return album;
+}
+
+async function updateDbMetadata() {
     MongoClient.connect(url,  async (err, client) => {
         if (err) throw err;
         let db = client.db(dbName);
 
         let albums = await db.collection('albums').find().toArray();
-        
-        for (let album of albums) {
+        for (let album of albums) {           
             // Find artist
             let artist = await db.collection('artists').findOne({_id:album.artist});
-            album.releaseDate = await getAlbumReleaseDate(artist.name, album.name);
-            await db.collection('albums').update({_id: album._id}, album).catch( err => console.log(err));
+            let updatedAlbum = await getAppleMusicMetadata(album, artist);
+            await db.collection('albums').updateOne({_id: album._id}, {$set: updatedAlbum}, {upsert:true}).catch( err => console.log(err));
+            console.log();
         }
 
     });
 
 }
 
-updateDbReleaseDates();
+updateDbMetadata().catch(err => console.log(err));
+//getAppleMusicAlbum('Employed To Serve', 'Eternal Forward Motion');
