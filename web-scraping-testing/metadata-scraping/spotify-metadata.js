@@ -35,9 +35,42 @@ async function getSpotifyAlbum(artist, name) {
     let url = `https://api.spotify.com/v1/search?q=${artistString}%20${albumString}&type=album`;
     let response = await axios.get(url, {headers: {Authorization: `Bearer ${token}`}});
     
-    console.log(response.data.albums);
+    let albums = response.data.albums.items;
+    
+    // Filter out single albums
+    albums = albums.filter(album => {return (album.album_type != 'single')});
+    console.log(albums);
 
+    //Find first matching result 
+    let album = albums.find( album => {
+        // Clean all of punctuation
+        // Clean any instance of 'and'
+        // Clean all spaces
+        let cleanedInputName = name.toLowerCase().replace(regex, '').replace(/ and /g, '').replace(/ /g, '');
+        let cleanedInputArtist = artist.toLowerCase().replace(regex,'').replace(/ and /g, '').replace(/ /g, '');;
+
+        let cleanedOutputName = album.name.toLowerCase().replace(regex, '').replace(/ and /g, '').replace(/ /g, '');;
+        let cleanedOutPutArtist = album.artists[0].name.toLowerCase().replace(regex, '').replace(/ and /g, '').replace(/ /g, '');;
+
+        console.log(cleanedInputName);
+        console.log(cleanedOutputName);
+        console.log(cleanedInputArtist);
+        console.log(cleanedOutPutArtist);
+        
+        
+        // Test for .includes() instead of match
+        // Should cover cases like '[name] Deluxe Edition' or multiple artist features
+        return (
+            (cleanedOutPutArtist.includes(cleanedInputArtist) || cleanedInputArtist.includes(cleanedOutPutArtist))
+            && 
+            (cleanedOutputName.includes(cleanedInputName) || cleanedInputName.includes(cleanedOutputName))
+        );
+    });
+
+    if (album === undefined) throw new Error(`Error finding spotify data:${artist} - ${name}\n`);
+
+    return album;
 
 }
 
-getSpotifyAlbum('Charli XCX', 'Charli').catch(err => {console.log(err.response.data);});
+getSpotifyAlbum('Charli XCX', 'Charli').catch(err => {console.log(err);});
