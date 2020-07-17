@@ -4,69 +4,99 @@ const fs = require('fs');
 //const { getAotyScores } = require('./aoty-scraper');
 
 
-const chartsUrl = 'http://ws.audioscrobbler.com/2.0/?method=chart.gettopartists&api_key=5e7132f2eb9c579f0f81b7d6d8c10d99&format=json'
-async function getChartsScores() {
-    const response = await axios.get(chartsUrl);
-    //console.log(response.data.artists.artist);
+async function getAlbumArtwork(artist, name) {
+    const key = fs.readFileSync('last-fm-key.txt', 'utf-8');
 
-    response.data.artists.artist.map(async artist  =>  {
-        //console.log(`${artist.name} ==> ${artist.mbid}`);
-
-        if (artist.mbid) {
-            const albumsUrl = `http://ws.audioscrobbler.com/2.0/?method=artist.gettopalbums&mbid=${artist.mbid}&api_key=5e7132f2eb9c579f0f81b7d6d8c10d99&format=json`;
-            //console.log(albumsUrl);
-            const response = await axios.get(albumsUrl);
-            const albums = response.data.topalbums.album;
-            //console.log(albums);
-            try {
-                await scraper.getAotyScores(artist.name, albums[0].name);
-                console.log(`${artist.name} -- ${albums[0].name}`);
-                console.log(); console.log(); console.log(); console.log();
-            }
-            catch{
-
-            }
-            
-            /*albums.map( async album => {
-                //onsole.log(album);
-                //console.log(album.name);
-                //console.log(artist.name);
-                try {
-                    scraper.getAotyScores(artist.name, album.name);
-                }
-                catch {
-                    //console.log('error using my function')
-                }
-                // getAotyScores(artist.name, album.name);
-            });*/
-        }
-        /*const albumsUrl = `http://ws.audioscrobbler.com/2.0/?method=artist.gettopalbums&mbid=${artist.mbid}&api_key=YOUR_API_KEY&format=json`;
-
-        const response = await axios.get(albumsUrl);
-
-        console.log(response);*/
-    })
-    //const chartsJson = await response.toJson();
-    //console.log(chartsJson.artists);
-    /*for (var key in chartsJson) {
-
-    }*/
-}
-
-async function getAlbumReleaseDate(artist, name) {
-    const key = await fs.readFileSync('key.txt', 'utf-8');
+    let regex = /[!"#$%&'()*+,-./:;<=>?’@[\]^_`{|}~]/g;
+    let artistString = artist.replace(regex, '').replace(/ /g, '%20');
+    let albumString = name.replace(regex, '').replace(/ /g, '%20');
     
-    name = `how i'm feeling now`.replace(/ /g, '%20');
-
-    const albumUrl = `http://ws.audioscrobbler.com/2.0/?method=album.search&album=${name}&api_key=${key}&format=json`
+    const albumUrl = `http://ws.audioscrobbler.com/2.0/?method=album.search&album=${albumString}&artist=${artistString}&api_key=${key}&format=json`
     
     const response = await axios.get(albumUrl);
 
-    let results = response.data.results.albummatches.album;
-    console.log(results[0]);
+    let albums = response.data.results.albummatches.album;
 
+    let album = albums.find( album => {
+        // Clean all of punctuation
+        // Clean any instance of 'and'
+        // Clean all spaces
+        let cleanedInputName = name.toLowerCase().replace(regex, '').replace(/ and /g, '').replace(/ /g, '');
+        let cleanedInputArtist = artist.toLowerCase().replace(regex,'').replace(/ and /g, '').replace(/ /g, '');;
+
+        let cleanedOutputName = album.name.toLowerCase().replace(regex, '').replace(/ and /g, '').replace(/ /g, '');;
+        let cleanedOutPutArtist = album.artist.toLowerCase().replace(regex, '').replace(/ and /g, '').replace(/ /g, '');;
+
+        console.log(cleanedInputName);
+        console.log(cleanedOutputName);
+        console.log(cleanedInputArtist);
+        console.log(cleanedOutPutArtist);
+        
+        
+        // Test for .includes() instead of match
+        // Should cover cases like '[name] Deluxe Edition' or multiple artist features
+        return (
+            (cleanedOutPutArtist.includes(cleanedInputArtist) || cleanedInputArtist.includes(cleanedOutPutArtist))
+            && 
+            (cleanedOutputName.includes(cleanedInputName) || cleanedInputName.includes(cleanedOutputName))
+        );
+    });
+    
+    if (album === undefined) throw new Error(`Error finding lastfm image data:${artist} - ${name}\n`);
+
+    let image = album.image.find( image => {return image.size == 'extralarge'} );
+    if (image === undefined) throw new Error(`Error finding lastfm image data:${artist} - ${name}\n`);
+    
+    console.log(image['#text'].replace('300x300', '1024x1024'));
+
+    return image['#text'].replace('300x300', '1024x1024');
 
 }
-console.log('hello');
 
-getAlbumReleaseDate().catch(err => console.log(err));
+async function getArtistImage(artistName) {
+    const key = fs.readFileSync('last-fm-key.txt', 'utf-8');
+
+    let regex = /[!"#$%&'()*+,-./:;<=>?’@[\]^_`{|}~]/g;
+    let artistString = artistName.replace(regex, '').replace(/ /g, '%20');
+    
+    const albumUrl = `http://ws.audioscrobbler.com/2.0/?method=artist.search&artist=${artistString}&api_key=${key}&format=json`
+    
+    const response = await axios.get(albumUrl);
+    console.log(response.data);
+
+    let artists = response.data.results.artistmatches.artist;
+    console.log(artists);
+
+    let artist = artists.find( artist => {
+        // Clean all of punctuation
+        // Clean any instance of 'and'
+        // Clean all spaces
+        let cleanedInputArtist = artistName.toLowerCase().replace(regex,'').replace(/ and /g, '').replace(/ /g, '');;
+
+        let cleanedOutPutArtist = artist.name.toLowerCase().replace(regex, '').replace(/ and /g, '').replace(/ /g, '');;
+
+        console.log(cleanedInputArtist);
+        console.log(cleanedOutPutArtist);
+        
+        
+        // Test for .includes() instead of match
+        // Should cover cases like '[name] Deluxe Edition' or multiple artist features
+        return (
+            (cleanedOutPutArtist.includes(cleanedInputArtist) || cleanedInputArtist.includes(cleanedOutPutArtist))
+        );
+    });
+    
+    if (artist === undefined) throw new Error(`Error finding lastfm image data:${artist}\n`);
+    console.log(artist.image);
+    let image = artist.image.find( image => {return image.size == 'extralarge'} );
+    if (image === undefined) throw new Error(`Error finding lastfm image data:${artist} \n`);
+    
+    console.log(image['#text'].replace('300x300', '1024x1024'));
+
+    return image['#text'].replace('300x300', '1024x1024');
+}
+
+
+module.exports = {
+    getAlbumArtwork:getAlbumArtwork,
+}
