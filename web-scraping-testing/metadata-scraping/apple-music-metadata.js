@@ -59,7 +59,7 @@ async function getAppleMusicAlbum(artist,name) {
     }
     catch (err) {
         // Write error to file if needed
-        throw new Error(`Error with ${artist} -- ${name}: ${err.toString()}`);
+        throw new Error(`Error with ${artist} -- ${name}: ${err.toString()}\n`);
         
     }
 }
@@ -106,7 +106,56 @@ async function getAppleMusicMetadata(album, artist) {
     }
 }
 
+async function getAppleMusicArtist(artistName) {
+    try{
+        // artist parameter is artist name
+    
+        let regex = /[!"#$%&'()*+,-./:;<=>?’@[\]^_`{|}~]/g;
+        let artistString = artistName.replace(regex, '').replace(/ /g, '+');
+        let search = `${artistString}`;
+            
+        // Get API response using token 
+        let response = await axios.get(`https://api.music.apple.com/v1/catalog/us/search?term=${search}&limit=5`, {headers: {Authorization: `Bearer ${jwtToken}`}});
+        console.log(response.status);
+        let artists = response.data.results.artists.data;
+
+        //Find first matching result 
+        let appleMusicArtist = artists.find( artist => {
+            // Clean all of punctuation
+            // Clean any instance of 'and'
+            // Clean all spaces
+            let cleanedInputArtist = artistName.toLowerCase().replace(regex,'').replace(/ and /g, '').replace(/ /g, '');;
+
+            let cleanedOutPutArtist = artist.attributes.name.toLowerCase().replace(regex, '').replace(/ and /g, '').replace(/ /g, '');;
+
+            console.log(cleanedInputArtist);
+            console.log(cleanedOutPutArtist);
+            
+            
+            // Test for .includes() instead of match
+            // Should cover cases like '[name] Deluxe Edition' or multiple artist features
+            return (
+                (cleanedOutPutArtist.includes(cleanedInputArtist) || cleanedInputArtist.includes(cleanedOutPutArtist))
+            );
+        });
+
+        if (appleMusicArtist === undefined) throw new Error(`Error finding apple music data:${artist}\n`);
+        return appleMusicArtist;
+    }
+    catch (err) {
+        throw err;
+    }
+
+}
+
+async function getAppleMusicArtistLink(artistName) {
+    let artist = await getAppleMusicArtist(artistName);
+    return artist.attributes.url;
+}
+
+
 module.exports = {
     getAppleMusicAlbum: getAppleMusicAlbum,
     getAppleMusicMetadata: getAppleMusicMetadata,
+    getAppleMusicArtistLink: getAppleMusicArtistLink,
 }
